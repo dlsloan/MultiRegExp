@@ -1,6 +1,6 @@
 function MultiRegExp(regex) {
 
-    var expandSource = function(braces, indexer) {
+    var expandSource = function (braces, indexer) {
         ret = '';
         for (var i = 0; i < braces.length; i++) {
             if (braces[i].type == 'raw') {
@@ -8,9 +8,14 @@ function MultiRegExp(regex) {
                 indexer.next();
             } else if (braces[i].type == 'brace' && braces[i].containsCapture) {
                 ret += braces[i].pre + expandSource(braces[i].children, indexer) + braces[i].post;
-            } else {
+            } else if (braces[i].type == 'brace' && !braces[i].isCapture) {
+                ret += '(' + braces[i].text.substring(braces[i].pre.length, braces[i].text.length - braces[i].post.length) + ')';
+                indexer.next();
+            } else if (braces[i].type == 'brace') {
                 ret += braces[i].text;
                 indexer.next(true);
+            } else {
+                ret += braces[i].text;
             }
         }
         return ret;
@@ -129,10 +134,36 @@ function MultiRegExp(regex) {
         return ret.pos == -1 ? null : ret;
     }
 
+    var fixOrs = function (braces_W_raw) {
+        //throw 'temp';
+        var orsAt = [];
+        var orFind = /^(\\.|[^\\|])*\|/;
+        for (var i = 0; i < braces_W_raw.length; i++) {
+            if (braces_W_raw[i].type == 'raw') {
+                var fullText = braces_W_raw[i].text;
+                var m = orFind.exec(fullText);
+                if (m != null) {
+                    var or = { type: 'or', pos: m[0].length - 1 + braces_W_raw[i].pos, length: 1, text: '|' };
+                    var raw = { type: 'raw', pos: m[0].length + braces_W_raw[i].pos,
+                        length: fullText.length - m[0].length,
+                        text: fullText.substring(m[0].length, fullText.length)
+                    };
+                    braces_W_raw[i].text = fullText.substring(0, m[0].length - 1);
+                    braces_W_raw[i].length = braces_W_raw[i].text.length;
+                    braces_W_raw.splice(i + 1, 0, or, raw);
+                    i += 1;
+                }
+            } else if (braces_W_raw[i].type == 'brace') {
+                fixOrs(braces_W_raw[i].children, braces_W_raw[i].text);
+            }
+        }
+    }
+
     var source = regex.source;
     var braces = GetBraces(source);
     captureScan(braces);
     fillGaps(braces, source);
+    fixOrs(braces);
     var indexer = {i: 1, next: 
                        function (realPoint) { 
                            if (realPoint) {
