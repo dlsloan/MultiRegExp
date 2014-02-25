@@ -135,8 +135,6 @@ function MultiRegExp(regex) {
     }
 
     var fixOrs = function (braces_W_raw) {
-        //throw 'temp';
-        var orsAt = [];
         var orFind = /^(\\.|[^\\|])*\|/;
         for (var i = 0; i < braces_W_raw.length; i++) {
             if (braces_W_raw[i].type == 'raw') {
