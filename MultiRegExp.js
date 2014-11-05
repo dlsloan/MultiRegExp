@@ -1,5 +1,17 @@
-function MultiRegExp(regex) {
-
+function MultiRegExp(par) {
+    var regex;
+    if (par.source !== undefined){
+        regex = par;
+    } else {
+        var exp = par;
+        var opts = "";
+        if (par.substring(0, 1) == "/") {
+            var l = par.lastIndexOf("/");
+            opts = par.substring(l + 1, par.length);
+            exp = par.substring(1, l);
+        }
+        regex = new RegExp(exp, opts);
+    }
     var expandSource = function (braces, indexer) {
         ret = '';
         for (var i = 0; i < braces.length; i++) {
